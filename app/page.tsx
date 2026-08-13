@@ -1,58 +1,113 @@
 "use client";
 
+import { useMemo } from "react";
 import RegionTabs from "@/components/layout/RegionTabs";
+import StockCard from "@/components/StockCard";
+import MarketSummary from "@/components/MarketSummary";
 import { useStockStore } from "@/store/useStockStore";
+import { Search } from "lucide-react";
 
 export default function HomePage() {
-  const { selectedRegion, stocks } = useStockStore();
+  const {
+    selectedRegion,
+    stocks,
+    showGainersOnly,
+    setShowGainersOnly,
+    searchQuery,
+    setSearchQuery,
+  } = useStockStore();
 
-  const filtered = stocks.filter((s) => s.region === selectedRegion);
+  const filteredAndSorted = useMemo(() => {
+    let result = stocks.filter((s) => s.region === selectedRegion);
+
+    // Search
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(
+        (s) =>
+          s.symbol.toLowerCase().includes(q) ||
+          s.name.toLowerCase().includes(q)
+      );
+    }
+
+    // Gainers only
+    if (showGainersOnly) {
+      result = result.filter((s) => s.changePercent > 0);
+    }
+
+    // Sort by highest % change first
+    result = [...result].sort((a, b) => b.changePercent - a.changePercent);
+
+    return result;
+  }, [stocks, selectedRegion, searchQuery, showGainersOnly]);
 
   return (
     <div>
+      {/* Header */}
       <div className="mb-8">
-        <h2 className="text-2xl font-bold mb-2">Top Performing Stocks</h2>
+        <h2 className="text-2xl font-bold mb-1">Top Performing Stocks</h2>
         <p className="text-slate-400 text-sm">
-          Track the best movers across different markets
+          Real-time ranking of the best movers across markets
         </p>
       </div>
 
-      <RegionTabs />
+      {/* Region Tabs */}
+      <div className="mb-6">
+        <RegionTabs />
+      </div>
 
-      <div className="mt-8">
-        <p className="text-sm text-slate-400 mb-4">
-          Showing {filtered.length} stocks in{" "}
-          <span className="text-white capitalize">{selectedRegion}</span>
-        </p>
+      {/* Market Summary */}
+      <MarketSummary />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((stock) => (
-            <div
-              key={stock.id}
-              className="bg-slate-900 border border-slate-800 rounded-xl p-5"
-            >
-              <div className="flex justify-between items-start mb-3">
-                <div>
-                  <p className="font-semibold">{stock.symbol}</p>
-                  <p className="text-xs text-slate-400">{stock.name}</p>
-                </div>
-                <span
-                  className={`text-sm font-medium ${
-                    stock.changePercent >= 0 ? "text-emerald-400" : "text-red-400"
-                  }`}
-                >
-                  {stock.changePercent >= 0 ? "+" : ""}
-                  {stock.changePercent.toFixed(2)}%
-                </span>
-              </div>
-              <p className="text-xl font-bold">
-                {stock.currency === "USD" ? "$" : stock.currency === "NGN" ? "₦" : ""}
-                {stock.price.toLocaleString()}
-              </p>
-            </div>
+      {/* Controls */}
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-8">
+        {/* Search */}
+        <div className="relative w-full sm:w-72">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+          <input
+            type="text"
+            placeholder="Search symbol or name..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+          />
+        </div>
+
+        {/* Gainers Toggle */}
+        <button
+          onClick={() => setShowGainersOnly(!showGainersOnly)}
+          className={`px-4 py-2.5 rounded-xl text-sm font-medium transition ${
+            showGainersOnly
+              ? "bg-emerald-600 text-white"
+              : "bg-slate-900 border border-slate-800 text-slate-300 hover:bg-slate-800"
+          }`}
+        >
+          {showGainersOnly ? "Showing Gainers Only" : "Show Gainers Only"}
+        </button>
+      </div>
+
+      {/* Results count */}
+      <div className="mb-5">
+        <h3 className="font-semibold">
+          {filteredAndSorted.length} Stock
+          {filteredAndSorted.length !== 1 ? "s" : ""}
+          {showGainersOnly && " (Gainers)"}
+        </h3>
+      </div>
+
+      {/* Stock Grid */}
+      {filteredAndSorted.length === 0 ? (
+        <div className="text-center py-20 text-slate-500">
+          <p className="text-lg mb-2">No stocks found</p>
+          <p className="text-sm">Try changing the region or search term</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+          {filteredAndSorted.map((stock, index) => (
+            <StockCard key={stock.id} stock={stock} rank={index + 1} />
           ))}
         </div>
-      </div>
+      )}
     </div>
   );
 }
