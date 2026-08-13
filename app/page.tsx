@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import RegionTabs from "@/components/layout/RegionTabs";
 import StockCard from "@/components/StockCard";
 import MarketSummary from "@/components/MarketSummary";
+import Recommendations from "@/components/Recommendations";
 import { useStockStore } from "@/store/useStockStore";
 import { Search } from "lucide-react";
 
@@ -58,6 +59,9 @@ export default function HomePage() {
 
       {/* Market Summary */}
       <MarketSummary />
+
+      {/* Smart Recommendations */}
+      <Recommendations />
 
       {/* Controls */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-8">
